@@ -10,10 +10,4 @@ router.delete("/:id", productController.deletePro);
 
 router.put("/:id", productController.put)
 
-router.get("/filter", productController.filterproduct);
-
-router.get("/page", productController.getPaginatedProducts)
-
-router.get("/by-category", productController.filterByCategory)
-
 module.exports = router

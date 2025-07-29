@@ -3,20 +3,59 @@ const response = require("../response");
 
 //GET PRODUK
 function getProduct(req, res) {
-  const query = `
+  const { search, category, page = 1, limit = 10 } = req.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  let sql = `
     SELECT 
-      products.id,
-      products.product_name,
-      products.description,
-      products.price,
-      product_category.name
-    FROM products
-    LEFT JOIN product_category ON products.category_id = product_category.id
+      p.id,
+      p.product_name,
+      p.description,
+      p.price,
+      c.name AS category_name
+    FROM products p
+    LEFT JOIN product_category c ON p.category_id = c.id
+    WHERE 1=1
   `;
-  db.query(query, (err, result) => {
-    response(200, result, "get all data from product", res);
+
+  const params = [];
+
+  // Filter berdasarkan nama produk (LIKE)
+  if (search) {
+    sql += ` AND p.product_name LIKE ?`;
+    params.push(`%${search}%`);
+  }
+
+  // Filter berdasarkan kategori
+  if (category) {
+    sql += ` AND c.name = ?`;
+    params.push(category);
+  }
+
+  // Tambahkan pagination
+  sql += ` LIMIT ? OFFSET ?`;
+  params.push(parseInt(limit), offset);
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: "Terjadi kesalahan", error: err });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Tidak ada produk ditemukan" });
+    }
+
+    res.status(200).json({
+      message: "Berhasil mengambil produk",
+      data: result,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+      },
+    });
   });
 }
+
 
 //POST PRODUK
 function post(req, res) {
@@ -80,63 +119,60 @@ function deletePro(req, res) {
   });
 }
 
-//FILTER PRODUK
-function filterproduct(req, res) {
-  const search = req.query.search; 
-  const sql = `SELECT * FROM products WHERE product_name LIKE ?`; 
-  const searchParam = `%${search}%`; 
+// //FILTER PRODUK
+// function filterproduct(req, res) {
+//   const search = req.query.search; 
+//   const sql = `SELECT * FROM products WHERE product_name LIKE ?`; 
+//   const searchParam = `%${search}%`; 
 
-  db.query(sql, [searchParam], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Terjadi kesalahan", error: err });
-    }
-    res.status(200).json({ message: "Hasil pencarian produk", data: result });
-  });
-}
+//   db.query(sql, [searchParam], (err, result) => {
+//     if (err) {
+//       return res.status(500).json({ message: "Terjadi kesalahan", error: err });
+//     }
+//     res.status(200).json({ message: "Hasil pencarian produk", data: result });
+//   });
+// }
 
-//PAGINATION
-const getPaginatedProducts = (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 2;
-  const offset = (page - 1) * limit;
+// //PAGINATION
+// const getPaginatedProducts = (req, res) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 2;
+//   const offset = (page - 1) * limit;
 
-  const sql = `SELECT * FROM products LIMIT ${limit} OFFSET ${offset}`;
-  db.query(sql, (err, result) => {
-    if (err) return response(500, [], "Gagal mengambil data", res);
+//   const sql = `SELECT * FROM products LIMIT ${limit} OFFSET ${offset}`;
+//   db.query(sql, (err, result) => {
+//     if (err) return response(500, [], "Gagal mengambil data", res);
 
-    response(200, result, "data page", res);
-  });
-};
+//     response(200, result, "data page", res);
+//   });
+// };
 
-//FILTER BY CATEGORY
-function filterByCategory(req, res) {
-  const category = req.query.category;
+// //FILTER BY CATEGORY
+// function filterByCategory(req, res) {
+//   const category = req.query.category;
 
-  const sql = `
-    SELECT p.id, p.product_name, p.description, p.price, c.name
-    FROM products p
-    JOIN product_category c ON p.category_id = c.id
-    WHERE c.name = ?`;
+//   const sql = `
+//     SELECT p.id, p.product_name, p.description, p.price, c.name
+//     FROM products p 
+//     JOIN product_category c ON p.category_id = c.id
+//     WHERE c.name = ?`;
 
-  db.query(sql, [category], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+//   db.query(sql, [category], (err, result) => {
+//     if (err) {
+//       return res.status(500).json({ error: err.message });
+//     }
 
-    if (result.length === 0) {
-      return res.status(404).json({ message: "Produk dengan kategori tersebut tidak ditemukan" });
-    }
+//     if (result.length === 0) {
+//       return res.status(404).json({ message: "Produk dengan kategori tersebut tidak ditemukan" });
+//     }
 
-    res.status(200).json(result);
-  });
-}
+//     res.status(200).json(result);
+//   });
+// }
 
 module.exports = {
   getProduct,
   post,
   put,
-  deletePro,
-  filterproduct,
-  getPaginatedProducts,
-  filterByCategory
+  deletePro
 };
