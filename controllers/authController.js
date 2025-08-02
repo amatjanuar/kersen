@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const response = require("../response");
 
+
 // REGISTER USER
 const register = async (req, res) => {
   const { firstname, lastname, email, password } = req.body;
@@ -11,7 +12,6 @@ const register = async (req, res) => {
     return res.status(400).json({ error: "Semua field harus diisi" });
   }
 
-  // Cek apakah email sudah digunakan
   db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
     if (err) return res.status(500).json({ error: "Database error saat cek email" });
 
@@ -21,7 +21,7 @@ const register = async (req, res) => {
 
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
-      const sql = `INSERT INTO users (id, firstname, lastname, email, password, role) VALUES (UUID(), ?, ?, ?, ?, 'user')`;
+      const sql = `INSERT INTO users (id, firstname, lastname, email, password, role) VALUES (UUID(), ?, ?, ?, ?, 'customer')`;
 
       db.query(sql, [firstname, lastname, email, hashedPassword], (err, result) => {
         if (err) return res.status(500).json({ error: "Gagal insert user" });

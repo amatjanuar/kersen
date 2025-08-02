@@ -11,7 +11,7 @@ router.post("/post", usersController.createUser);
 router.put("/update", authenticate, usersController.updateUser);
 
 // Middleware autentikasi + otorisasi superadmin
-router.delete("/:id", authenticate, authorizeSuperadmin, usersController.deleteUser);
+router.delete("/delete", authenticate, authorizeSuperadmin, usersController.deleteUser);
 
 router.put("/change", authenticate, usersController.changePassword);
 

@@ -2,6 +2,8 @@ const db = require('../config/db');
 const response = require('../response');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
 
 function getUsers(req, res) {
   db.query("SELECT * FROM users", (err, result) => {
@@ -57,18 +59,32 @@ function updateUser(req, res) {
 
 
 
-function deleteUser(req, res) {
-  const userId = req.user.id; // dari token
+const deleteUser = (req, res) => {
+  const targetToken = req.body.token; // token user yang mau dihapus
 
-  if (req.user.role !== "superadmin") {
-    return res.status(403).json({ error: "Hanya superadmin yang bisa hapus akun" });
+  if (!targetToken) {
+    return res.status(400).json({ error: "Token target ditemukan" });
   }
 
-  db.query("DELETE FROM users WHERE id = ?", [userId], (err, result) => {
-    if (err) return res.status(500).json({ error: err });
-    response(200, result, "Akun berhasil dihapus", res);
+  // Verifikasi token target
+  jwt.verify(targetToken, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ error: "Token target tidak valid" });
+
+    const userIdToDelete = decoded.id;
+
+    const sql = `DELETE FROM users WHERE id = ?`;
+
+    db.query(sql, [userIdToDelete], (err, result) => {
+      if (err) return res.status(500).json({ error: "Gagal menghapus user" });
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "User tidak ditemukan" });
+      }
+
+      response(200, { id: userIdToDelete }, "User berhasil dihapus", res);
+    });
   });
-}
+};
 
 const changePassword = async (req, res) => {
   const userId = req.user.id; // dari token
