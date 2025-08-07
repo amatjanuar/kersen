@@ -35,7 +35,7 @@ async function createUser(req, res) {
 
 
 function updateUser(req, res) {
-  const id = req.user.id; // ID dari token
+  const id = req.params.id; // ID dari URL, misalnya /users/:id
   const { firstname, lastname, email } = req.body;
 
   if (!firstname || !lastname || !email) {
@@ -53,38 +53,31 @@ function updateUser(req, res) {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "User tidak ditemukan" });
     }
-    response(200, result, "User berhasil diupdate berdasarkan token", res);
+    response(200, result, "User berhasil diupdate berdasarkan ID", res);
   });
 }
 
 
-
 const deleteUser = (req, res) => {
-  const targetToken = req.body.token; // token user yang mau dihapus
+  const userIdToDelete = req.params.id; // ID dari URL, misalnya /users/:id
 
-  if (!targetToken) {
-    return res.status(400).json({ error: "Token target ditemukan" });
+  if (!userIdToDelete) {
+    return res.status(400).json({ error: "ID user tidak ditemukan di parameter" });
   }
 
-  // Verifikasi token target
-  jwt.verify(targetToken, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ error: "Token target tidak valid" });
+  const sql = `DELETE FROM users WHERE id = ?`;
 
-    const userIdToDelete = decoded.id;
+  db.query(sql, [userIdToDelete], (err, result) => {
+    if (err) return res.status(500).json({ error: "Gagal menghapus user" });
 
-    const sql = `DELETE FROM users WHERE id = ?`;
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "User tidak ditemukan" });
+    }
 
-    db.query(sql, [userIdToDelete], (err, result) => {
-      if (err) return res.status(500).json({ error: "Gagal menghapus user" });
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "User tidak ditemukan" });
-      }
-
-      response(200, { id: userIdToDelete }, "User berhasil dihapus", res);
-    });
+    response(200, { id: userIdToDelete }, "User berhasil dihapus", res);
   });
 };
+
 
 const changePassword = async (req, res) => {
   const userId = req.user.id; // dari token

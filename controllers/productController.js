@@ -12,6 +12,7 @@ function getProduct(req, res) {
       p.product_name,
       p.description,
       p.price,
+      p.image,
       c.name AS category_name
     FROM products p
     LEFT JOIN product_category c ON p.category_id = c.id
@@ -20,19 +21,16 @@ function getProduct(req, res) {
 
   const params = [];
 
-  // Filter berdasarkan nama produk (LIKE)
   if (search) {
     sql += ` AND p.product_name LIKE ?`;
     params.push(`%${search}%`);
   }
 
-  // Filter berdasarkan kategori
   if (category) {
     sql += ` AND c.name = ?`;
     params.push(category);
   }
 
-  // Tambahkan pagination
   sql += ` LIMIT ? OFFSET ?`;
   params.push(parseInt(limit), offset);
 
@@ -59,37 +57,36 @@ function getProduct(req, res) {
 
 //POST PRODUK
 function post(req, res) {
-    const { product_name, description, price, category_id } = req.body;
+  const { product_name, description, price, category_id, image } = req.body;
 
-    
-    if (!product_name || !price) {
-        return response(400, {}, "Semua field harus diisi", res);
+  if (!product_name || !price) {
+    return response(400, {}, "Semua field harus diisi", res);
+  }
+
+  const sql = `INSERT INTO products (product_name, description, price, category_id, image) VALUES (?, ?, ?, ?, ?)`;
+
+  db.query(sql, [product_name, description, price, category_id, image], (err, result) => {
+    if (err) {
+      console.error("Query Error: ", err);
+      return response(500, {}, "Gagal menyimpan data", res);
     }
 
-    const sql = `INSERT INTO products (product_name, description, price, category_id) VALUES (?, ?, ?, ?)`;
-
-    db.query(sql, [product_name, description, price, category_id], (err, result) => {
-        if (err) {
-            console.error("Query Error: ", err);
-            return response(500, {}, "Gagal menyimpan data", res);
-        }
-
-        return response(201, { id: result.insertId, ...req.body }, "Produk berhasil ditambahkan", res);
-    });
+    return response(201, { id: result.insertId, ...req.body }, "Produk berhasil ditambahkan", res);
+  });
 }
 
 //PUT PRODUK
 function put(req, res) {
   const id = req.params.id;
-  const { product_name, description, price } = req.body;
+  const { product_name, description, price, category_id, image } = req.body;
 
-  if (!product_name || !description || !price) {
+  if (!product_name || !description || !price || !category_id || !image) {
     return response(400, {}, "Semua field wajib diisi", res);
   }
 
-  const sql = `UPDATE products SET product_name = ?, description = ?, price = ?, category_id = ? WHERE id = ?`;
+  const sql = `UPDATE products SET product_name = ?, description = ?, price = ?, category_id = ?, image = ? WHERE id = ?`;
 
-  db.query(sql, [product_name, description, price, id], (err, result) => {
+  db.query(sql, [product_name, description, price, category_id, image, id], (err, result) => {
     if (err) {
       console.error(err);
       return response(500, {}, "Gagal mengupdate data", res);
@@ -101,7 +98,7 @@ function put(req, res) {
 
     return response(
       200,
-      { id, product_name, description, price },
+      { id, product_name, description, price, category_id, image },
       "Data berhasil diupdate",
       res
     );
